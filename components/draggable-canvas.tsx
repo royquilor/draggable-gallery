@@ -213,18 +213,16 @@ const SAMPLE_ITEMS: GalleryItem[] = [
  */
 export default function DraggableCanvas() {
   const [selectedItem, setSelectedItem] = useState<GalleryItem | null>(null)
+  const [isDragging, setIsDragging] = useState(false)
   const shouldReduceMotion = useReducedMotion()
   const constraintsRef = useRef<HTMLDivElement>(null)
   const contentRef = useRef<HTMLDivElement>(null)
   
-  // Use Motion values for smooth, GPU-accelerated animations
-  // These provide better performance than state updates for continuous animations
+  // Motion values for both drag and trackpad panning
   const x = useMotionValue(0)
   const y = useMotionValue(0)
   
-  // Spring animations for smooth momentum-based movement
-  // Lower damping = more bounce, higher damping = smoother/settles faster
-  // Defined outside component or with useMemo to avoid recreating on every render
+  // Spring animations for smooth trackpad/wheel panning (disabled during drag)
   const springConfig = useMemo(() => ({ stiffness: 300, damping: 30 }), [])
   const springX = useSpring(x, springConfig)
   const springY = useSpring(y, springConfig)
@@ -563,10 +561,12 @@ export default function DraggableCanvas() {
   // Disable text selection during drag for better UX
   const handleDragStart = () => {
     document.body.style.userSelect = 'none'
+    setIsDragging(true)
   }
 
   const handleDragEnd = () => {
     document.body.style.userSelect = ''
+    setIsDragging(false)
   }
 
   // Stagger animation variants for grid items - memoized to prevent recreation
@@ -648,26 +648,37 @@ export default function DraggableCanvas() {
         </motion.div>
       </header>
 
-      {/* Draggable Canvas - follows Figma code pattern exactly */}
+      {/* Draggable Canvas - follows tips pattern with motion values */}
       <motion.div
         drag
-        dragConstraints={panBounds}
+        dragConstraints={constraintsRef}
         dragElastic={0.1}
         dragTransition={{ 
           bounceStiffness: 300, 
           bounceDamping: 20
         }}
-        onDragStart={handleDragStart}
+        onDragStart={(event, info) => {
+          handleDragStart()
+          // Store the current position when drag starts so we can use it as reference
+          // This ensures drag works correctly even if element started at non-zero position
+        }}
         onDragEnd={handleDragEnd}
         onDrag={(event, info) => {
-          // Update motion values directly during drag for smooth interaction
-          x.set(info.offset.x)
-          y.set(info.offset.y)
+          // Use info.delta (change since last event) and add to current position
+          // This works correctly regardless of initial position
+          const { left, right, top, bottom } = panBoundsRef.current
+          const currentX = x.get()
+          const currentY = y.get()
+          const newX = clamp(currentX + info.delta.x, left, right)
+          const newY = clamp(currentY + info.delta.y, top, bottom)
+          x.set(newX)
+          y.set(newY)
         }}
         className="absolute cursor-grab active:cursor-grabbing"
         style={{
-          x: springX,
-          y: springY,
+          // Use direct values during drag, spring values when not dragging
+          x: isDragging ? x : springX,
+          y: isDragging ? y : springY,
         }}
       >
         <div
