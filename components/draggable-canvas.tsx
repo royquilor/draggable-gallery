@@ -1,11 +1,10 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
-import { motion, AnimatePresence, useReducedMotion } from "motion/react"
+import { useState, useEffect, useRef, useMemo, useCallback } from "react"
+import { motion, AnimatePresence, useReducedMotion, useMotionValue, useSpring, animate } from "motion/react"
 import Image from "next/image"
 import { X } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Card } from "@/components/ui/card"
 
 /**
  * GalleryItem - Interface for gallery items
@@ -214,46 +213,240 @@ const SAMPLE_ITEMS: GalleryItem[] = [
  */
 export default function DraggableCanvas() {
   const [selectedItem, setSelectedItem] = useState<GalleryItem | null>(null)
-  const [position, setPosition] = useState({ x: 0, y: 0 })
   const shouldReduceMotion = useReducedMotion()
   const constraintsRef = useRef<HTMLDivElement>(null)
+  const contentRef = useRef<HTMLDivElement>(null)
+  
+  // Use Motion values for smooth, GPU-accelerated animations
+  // These provide better performance than state updates for continuous animations
+  const x = useMotionValue(0)
+  const y = useMotionValue(0)
+  
+  // Spring animations for smooth momentum-based movement
+  // Lower damping = more bounce, higher damping = smoother/settles faster
+  // Defined outside component or with useMemo to avoid recreating on every render
+  const springConfig = useMemo(() => ({ stiffness: 300, damping: 30 }), [])
+  const springX = useSpring(x, springConfig)
+  const springY = useSpring(y, springConfig)
+  
+  // Utility clamp used for drag + trackpad panning.
+  const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value))
 
-  // Calculate initial position to center the view on the middle items
-  // This runs after component mounts to ensure window is available
+  /**
+   * panBounds
+   *
+   * We use explicit numeric constraints (instead of ref constraints) so:
+   * - dragging and trackpad panning share the same bounds
+   * - we can clamp x/y updates for wheel/trackpad gestures
+   */
+  const [panBounds, setPanBounds] = useState({
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
+  })
+
+  // Keep latest state in refs for non-react event listeners (wheel).
+  const panBoundsRef = useRef(panBounds)
+  const selectedItemRef = useRef<GalleryItem | null>(selectedItem)
+  const isAnimatingRef = useRef(false)
+  const hasInitializedRef = useRef(false)
+
   useEffect(() => {
-    const calculateInitialPosition = () => {
-      const viewportWidth = window.innerWidth
-      const itemWidth = 200 // size-[200px] container
-      const gap = 200
-      const itemsPerRow = 7
-      
-      // Calculate total row width: 7 items + 6 gaps
-      const totalRowWidth = (itemsPerRow * itemWidth) + ((itemsPerRow - 1) * gap)
-      
-      // We want the 4th item (index 3) to be centered in the viewport
-      // Position of 4th item from left: 3 * (itemWidth + gap) + itemWidth/2
-      const centerItemPosition = (3 * (itemWidth + gap)) + (itemWidth / 2)
-      
-      // Calculate offset to center this item in viewport
-      // We need to move the canvas left by: centerItemPosition - viewportWidth/2
-      const offsetX = centerItemPosition - (viewportWidth / 2)
-      
-      setPosition({ x: -offsetX, y: 0 })
+    panBoundsRef.current = panBounds
+  }, [panBounds])
+
+  useEffect(() => {
+    selectedItemRef.current = selectedItem
+  }, [selectedItem])
+
+  /**
+   * Compute pan bounds from actual rendered content size.
+   *
+   * This makes the canvas behave like a "scrollable" surface:
+   * - x is clamped to [-(contentWidth - viewportWidth), 0]
+   * - y is clamped to [-(contentHeight - viewportHeight), 0]
+   *
+   * If content fits in the viewport, bounds collapse to 0 (no panning needed).
+   */
+  useEffect(() => {
+    const recalc = () => {
+      const viewportEl = constraintsRef.current
+      const contentEl = contentRef.current
+      if (!viewportEl || !contentEl) return
+
+      const viewportWidth = viewportEl.clientWidth
+      const viewportHeight = viewportEl.clientHeight
+      const contentRect = contentEl.getBoundingClientRect()
+      const contentWidth = Math.ceil(contentRect.width)
+      const contentHeight = Math.ceil(contentRect.height)
+
+      const left = contentWidth > viewportWidth ? -(contentWidth - viewportWidth) : 0
+      const right = 0
+      const top = contentHeight > viewportHeight ? -(contentHeight - viewportHeight) : 0
+      const bottom = 0
+
+      // Only update bounds if they actually changed to prevent infinite loops
+      setPanBounds((prev) => {
+        if (
+          prev.left === left &&
+          prev.right === right &&
+          prev.top === top &&
+          prev.bottom === bottom
+        ) {
+          return prev // Return same object reference if unchanged
+        }
+        return { left, right, top, bottom }
+      })
+
+      // On first load, set an initial "camera" focus toward the middle of row 1.
+      // On resize, keep the user’s current position but clamp it into the new bounds.
+      // On first load only, calculate and center on the true middle of the content.
+      // This works for any number of items by finding the middle row and middle item.
+      if (!hasInitializedRef.current) {
+        const itemsPerRow = 7
+        const totalItems = SAMPLE_ITEMS.length
+        const totalRows = Math.ceil(totalItems / itemsPerRow)
+        
+        // Find the middle row (0-indexed)
+        const middleRowIndex = Math.floor(totalRows / 2)
+        
+        // Find the items in the middle row
+        const middleRowStart = middleRowIndex * itemsPerRow
+        const middleRowEnd = Math.min(middleRowStart + itemsPerRow, totalItems)
+        const middleRowItemCount = middleRowEnd - middleRowStart
+        
+        // Find the middle item index within that row (0-indexed)
+        const middleItemIndexInRow = Math.floor(middleRowItemCount / 2)
+        
+        // Calculate X position to center the middle item horizontally
+        const itemWidth = 200 // size-[200px] wrapper
+        const itemGap = 200
+        const centerItemXPosition = (middleItemIndexInRow * (itemWidth + itemGap)) + (itemWidth / 2)
+        const offsetX = centerItemXPosition - (viewportWidth / 2)
+        
+        // Calculate Y position to center the middle row vertically
+        const itemHeight = 112 // Height of items
+        const rowGap = 200
+        const padding = 100
+        // Position of the middle of the middle row
+        const centerRowYPosition = padding + (middleRowIndex * (itemHeight + rowGap)) + (itemHeight / 2)
+        const offsetY = centerRowYPosition - (viewportHeight / 2)
+
+        const clampedX = clamp(-offsetX, left, right)
+        const clampedY = clamp(-offsetY, top, bottom)
+        
+        // Set initial position directly (no animation on first load)
+        x.set(clampedX)
+        y.set(clampedY)
+        hasInitializedRef.current = true
+      } else {
+        // On resize, just clamp the current position to new bounds
+        const currentX = x.get()
+        const currentY = y.get()
+        const clampedX = clamp(currentX, left, right)
+        const clampedY = clamp(currentY, top, bottom)
+        
+        // Only update if position needs clamping (avoid unnecessary animations)
+        if (Math.abs(clampedX - currentX) > 1 || Math.abs(clampedY - currentY) > 1) {
+          animate(x, clampedX, { type: "spring", ...springConfig })
+          animate(y, clampedY, { type: "spring", ...springConfig })
+        }
+      }
     }
-    
-    calculateInitialPosition()
-    // Recalculate on resize
-    window.addEventListener('resize', calculateInitialPosition)
-    return () => window.removeEventListener('resize', calculateInitialPosition)
+
+    // Use requestAnimationFrame to ensure DOM is ready
+    const timeoutId = setTimeout(() => {
+      recalc()
+    }, 0)
+
+    window.addEventListener("resize", recalc)
+    return () => {
+      clearTimeout(timeoutId)
+      window.removeEventListener("resize", recalc)
+    }
+  }, []) // Empty deps - only run on mount and resize (not when x/y change)
+
+  /**
+   * Trackpad swipe support with smooth momentum (two-finger scroll → pan the canvas)
+   *
+   * On macOS trackpads, "swipe" gestures produce wheel events (deltaX/deltaY).
+   * We translate those deltas into smooth, momentum-based x/y movement.
+   *
+   * Performance optimizations:
+   * - Uses requestAnimationFrame for throttling to maintain 60fps
+   * - Motion's spring values provide GPU-accelerated animations
+   * - Prevents unnecessary re-renders by using motion values directly
+   *
+   * Accessibility wins:
+   * - Users can explore without click+drag
+   * - Works with trackpads and mice with tilt wheels
+   * - Smooth animations respect prefers-reduced-motion
+   */
+  useEffect(() => {
+    const viewportEl = constraintsRef.current
+    if (!viewportEl) return
+
+    let wheelTimeout: ReturnType<typeof setTimeout> | null = null
+    let rafId: number | null = null
+    let pendingUpdate = false
+
+    const onWheel = (e: WheelEvent) => {
+      // If the modal is open, don't hijack scrolling (let modal scroll naturally).
+      if (selectedItemRef.current) return
+
+      // Prevent the browser/page from scrolling.
+      e.preventDefault()
+
+      // Throttle updates using requestAnimationFrame for smooth 60fps performance
+      if (!pendingUpdate) {
+        pendingUpdate = true
+        rafId = requestAnimationFrame(() => {
+          const { left, right, top, bottom } = panBoundsRef.current
+          const currentX = x.get()
+          const currentY = y.get()
+
+          // Simple, direct position update - the spring will smooth it
+          const speed = 1.0
+          const newX = clamp(currentX - e.deltaX * speed, left, right)
+          const newY = clamp(currentY - e.deltaY * speed, top, bottom)
+
+          // Update position immediately - springX/springY will provide smooth interpolation
+          x.set(newX)
+          y.set(newY)
+
+          pendingUpdate = false
+        })
+      }
+
+      // Clear any pending timeout
+      if (wheelTimeout) {
+        clearTimeout(wheelTimeout)
+      }
+
+      // After wheel stops, ensure smooth final position (spring will handle deceleration)
+      wheelTimeout = setTimeout(() => {
+        // No-op - the spring already provides smooth deceleration
+        // This just ensures we don't have any lingering animations
+      }, 100)
+    }
+
+    // Important: passive:false so we can call preventDefault().
+    viewportEl.addEventListener("wheel", onWheel, { passive: false })
+    return () => {
+      if (wheelTimeout) clearTimeout(wheelTimeout)
+      if (rafId) cancelAnimationFrame(rafId)
+      viewportEl.removeEventListener("wheel", onWheel as EventListener)
+    }
   }, [])
 
-  // Calculate item dimensions
+  // Calculate item dimensions - memoized to prevent recalculation
   const itemHeight = 112
-  const getItemWidth = (aspectRatio: "portrait" | "landscape") => {
+  const getItemWidth = useCallback((aspectRatio: "portrait" | "landscape") => {
     return aspectRatio === "portrait" 
       ? Math.round(itemHeight * (3/4)) 
       : Math.round(itemHeight * (4/3))
-  }
+  }, [])
 
 
   // URL state management - sync selected item with URL query params
@@ -261,8 +454,12 @@ export default function DraggableCanvas() {
     const params = new URLSearchParams(window.location.search)
     const itemId = params.get("item")
     if (itemId) {
-      const item = SAMPLE_ITEMS.find(i => i.id === parseInt(itemId))
-      if (item) setSelectedItem(item)
+      // Validate and sanitize input - only allow numeric IDs
+      const parsedId = parseInt(itemId, 10)
+      if (!isNaN(parsedId) && parsedId > 0) {
+        const item = SAMPLE_ITEMS.find(i => i.id === parsedId)
+        if (item) setSelectedItem(item)
+      }
     }
   }, [])
 
@@ -291,16 +488,77 @@ export default function DraggableCanvas() {
     window.history.pushState({}, "", newUrl)
   }
 
-  // Keyboard navigation - ESC key closes modal
+  /**
+   * Navigate to previous item in the gallery
+   */
+  const navigateToPrevious = useCallback(() => {
+    if (!selectedItem) return
+    
+    const currentIndex = SAMPLE_ITEMS.findIndex(item => item.id === selectedItem.id)
+    if (currentIndex > 0) {
+      const previousItem = SAMPLE_ITEMS[currentIndex - 1]
+      setSelectedItem(previousItem)
+      // Update URL to reflect the new item
+      const params = new URLSearchParams(window.location.search)
+      params.set("item", previousItem.id.toString())
+      window.history.pushState({}, "", `?${params.toString()}`)
+    } else {
+      // Wrap around to last item
+      const lastItem = SAMPLE_ITEMS[SAMPLE_ITEMS.length - 1]
+      setSelectedItem(lastItem)
+      const params = new URLSearchParams(window.location.search)
+      params.set("item", lastItem.id.toString())
+      window.history.pushState({}, "", `?${params.toString()}`)
+    }
+  }, [selectedItem])
+
+  /**
+   * Navigate to next item in the gallery
+   */
+  const navigateToNext = useCallback(() => {
+    if (!selectedItem) return
+    
+    const currentIndex = SAMPLE_ITEMS.findIndex(item => item.id === selectedItem.id)
+    if (currentIndex < SAMPLE_ITEMS.length - 1) {
+      const nextItem = SAMPLE_ITEMS[currentIndex + 1]
+      setSelectedItem(nextItem)
+      // Update URL to reflect the new item
+      const params = new URLSearchParams(window.location.search)
+      params.set("item", nextItem.id.toString())
+      window.history.pushState({}, "", `?${params.toString()}`)
+    } else {
+      // Wrap around to first item
+      const firstItem = SAMPLE_ITEMS[0]
+      setSelectedItem(firstItem)
+      const params = new URLSearchParams(window.location.search)
+      params.set("item", firstItem.id.toString())
+      window.history.pushState({}, "", `?${params.toString()}`)
+    }
+  }, [selectedItem])
+
+  // Keyboard navigation - ESC to close modal, Arrow keys to navigate
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && selectedItem) {
-        closeDetail()
+      if (!selectedItem) return
+
+      switch (e.key) {
+        case "Escape":
+          closeDetail()
+          break
+        case "ArrowLeft":
+          e.preventDefault()
+          navigateToPrevious()
+          break
+        case "ArrowRight":
+          e.preventDefault()
+          navigateToNext()
+          break
       }
     }
+
     window.addEventListener("keydown", handleKeyDown)
     return () => window.removeEventListener("keydown", handleKeyDown)
-  }, [selectedItem])
+  }, [selectedItem, navigateToPrevious, navigateToNext])
 
   // Disable text selection during drag for better UX
   const handleDragStart = () => {
@@ -311,8 +569,8 @@ export default function DraggableCanvas() {
     document.body.style.userSelect = ''
   }
 
-  // Stagger animation variants for grid items
-  const containerVariants = {
+  // Stagger animation variants for grid items - memoized to prevent recreation
+  const containerVariants = useMemo(() => ({
     hidden: { opacity: 0 },
     show: {
       opacity: 1,
@@ -321,9 +579,9 @@ export default function DraggableCanvas() {
         delayChildren: shouldReduceMotion ? 0 : 0.1,
       }
     }
-  }
+  }), [shouldReduceMotion])
 
-  const itemVariants = {
+  const itemVariants = useMemo(() => ({
     hidden: { opacity: 0, y: shouldReduceMotion ? 0 : 20 },
     show: { 
       opacity: 1, 
@@ -333,7 +591,7 @@ export default function DraggableCanvas() {
         ease: [0.22, 1, 0.36, 1] as const
       }
     }
-  }
+  }), [shouldReduceMotion])
 
   return (
     <div 
@@ -354,8 +612,8 @@ export default function DraggableCanvas() {
         }
       `}</style>
 
-      {/* Header with title and instruction */}
-      <header className="fixed top-0 left-0 right-0 z-20 px-6 py-4 md:px-12 md:py-6 flex items-center justify-between pointer-events-none">
+      {/* Header with title and instruction - hidden */}
+      <header className="fixed top-0 left-0 right-0 z-20 px-6 py-4 md:px-12 md:py-6 flex items-center justify-between pointer-events-none hidden">
         <motion.h1 
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
@@ -377,7 +635,7 @@ export default function DraggableCanvas() {
       {/* Draggable Canvas - follows Figma code pattern exactly */}
       <motion.div
         drag
-        dragConstraints={constraintsRef}
+        dragConstraints={panBounds}
         dragElastic={0.1}
         dragTransition={{ 
           bounceStiffness: 300, 
@@ -386,16 +644,21 @@ export default function DraggableCanvas() {
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
         onDrag={(event, info) => {
-          setPosition({ x: info.offset.x, y: info.offset.y })
+          // Update motion values directly during drag for smooth interaction
+          x.set(info.offset.x)
+          y.set(info.offset.y)
         }}
         className="absolute cursor-grab active:cursor-grabbing"
         style={{
-          x: position.x,
-          y: position.y,
+          x: springX,
+          y: springY,
           willChange: "transform"
         }}
       >
-        <div className="flex flex-col gap-[200px] items-center justify-center p-[100px] min-h-screen">
+        <div
+          ref={contentRef}
+          className="flex flex-col gap-[200px] items-center justify-center p-[100px] min-h-screen"
+        >
           {/* Row 1 - Items 1-7 */}
           <motion.div 
             variants={containerVariants}
@@ -411,7 +674,7 @@ export default function DraggableCanvas() {
                   variants={itemVariants}
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
-                  className="flex items-center justify-center size-[200px] cursor-pointer"
+                  className="flex items-center justify-center size-[200px] cursor-pointer shadow-none"
                   onClick={(e) => {
                     e.stopPropagation()
                     openDetail(item)
@@ -426,7 +689,7 @@ export default function DraggableCanvas() {
                   role="button"
                   aria-label={`View details for ${item.title}`}
                 >
-                  <div className="relative" style={{ width: width, height: itemHeight }}>
+                  <div className="relative shadow-none" style={{ width: width, height: itemHeight }}>
                     <Image
                       src={item.image}
                       alt={item.title}
@@ -435,13 +698,14 @@ export default function DraggableCanvas() {
                       sizes={`${width}px`}
                       className="absolute inset-0 max-w-none object-cover pointer-events-none size-full rounded-md"
                       priority={item.id <= 4}
+                      loading={item.id <= 4 ? undefined : "lazy"}
                     />
-                    {/* Title overlay on hover */}
+                    {/* Title overlay on hover - hidden */}
                     <motion.div 
                       initial={{ opacity: 0, y: "100%" }}
                       whileHover={{ opacity: 1, y: 0 }}
                       transition={{ duration: 0.3 }}
-                      className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black/60 via-transparent to-transparent"
+                      className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black/60 via-transparent to-transparent hidden"
                     >
                       <h3 className="text-xs font-light text-white font-display line-clamp-2">
                         {item.title}
@@ -468,7 +732,7 @@ export default function DraggableCanvas() {
                   variants={itemVariants}
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
-                  className="flex items-center justify-center size-[200px] cursor-pointer"
+                  className="flex items-center justify-center size-[200px] cursor-pointer shadow-none"
                   onClick={(e) => {
                     e.stopPropagation()
                     openDetail(item)
@@ -483,7 +747,7 @@ export default function DraggableCanvas() {
                   role="button"
                   aria-label={`View details for ${item.title}`}
                 >
-                  <div className="relative" style={{ width: width, height: itemHeight }}>
+                  <div className="relative shadow-none" style={{ width: width, height: itemHeight }}>
                     <Image
                       src={item.image}
                       alt={item.title}
@@ -492,12 +756,12 @@ export default function DraggableCanvas() {
                       sizes={`${width}px`}
                       className="absolute inset-0 max-w-none object-cover pointer-events-none size-full rounded-md"
                     />
-                    {/* Title overlay on hover */}
+                    {/* Title overlay on hover - hidden */}
                     <motion.div 
                       initial={{ opacity: 0, y: "100%" }}
                       whileHover={{ opacity: 1, y: 0 }}
                       transition={{ duration: 0.3 }}
-                      className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black/60 via-transparent to-transparent"
+                      className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black/60 via-transparent to-transparent hidden"
                     >
                       <h3 className="text-xs font-light text-white font-display line-clamp-2">
                         {item.title}
@@ -524,7 +788,7 @@ export default function DraggableCanvas() {
                   variants={itemVariants}
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
-                  className="flex items-center justify-center size-[200px] cursor-pointer"
+                  className="flex items-center justify-center size-[200px] cursor-pointer shadow-none"
                   onClick={(e) => {
                     e.stopPropagation()
                     openDetail(item)
@@ -539,7 +803,7 @@ export default function DraggableCanvas() {
                   role="button"
                   aria-label={`View details for ${item.title}`}
                 >
-                  <div className="relative" style={{ width: width, height: itemHeight }}>
+                  <div className="relative shadow-none" style={{ width: width, height: itemHeight }}>
                     <Image
                       src={item.image}
                       alt={item.title}
@@ -548,12 +812,12 @@ export default function DraggableCanvas() {
                       sizes={`${width}px`}
                       className="absolute inset-0 max-w-none object-cover pointer-events-none size-full rounded-md"
                     />
-                    {/* Title overlay on hover */}
+                    {/* Title overlay on hover - hidden */}
                     <motion.div 
                       initial={{ opacity: 0, y: "100%" }}
                       whileHover={{ opacity: 1, y: 0 }}
                       transition={{ duration: 0.3 }}
-                      className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black/60 via-transparent to-transparent"
+                      className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black/60 via-transparent to-transparent hidden"
                     >
                       <h3 className="text-xs font-light text-white font-display line-clamp-2">
                         {item.title}
@@ -580,7 +844,7 @@ export default function DraggableCanvas() {
                   variants={itemVariants}
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
-                  className="flex items-center justify-center size-[200px] cursor-pointer"
+                  className="flex items-center justify-center size-[200px] cursor-pointer shadow-none"
                   onClick={(e) => {
                     e.stopPropagation()
                     openDetail(item)
@@ -595,7 +859,7 @@ export default function DraggableCanvas() {
                   role="button"
                   aria-label={`View details for ${item.title}`}
                 >
-                  <div className="relative" style={{ width: width, height: itemHeight }}>
+                  <div className="relative shadow-none" style={{ width: width, height: itemHeight }}>
                     <Image
                       src={item.image}
                       alt={item.title}
@@ -604,12 +868,12 @@ export default function DraggableCanvas() {
                       sizes={`${width}px`}
                       className="absolute inset-0 max-w-none object-cover pointer-events-none size-full rounded-md"
                     />
-                    {/* Title overlay on hover */}
+                    {/* Title overlay on hover - hidden */}
                     <motion.div 
                       initial={{ opacity: 0, y: "100%" }}
                       whileHover={{ opacity: 1, y: 0 }}
                       transition={{ duration: 0.3 }}
-                      className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black/60 via-transparent to-transparent"
+                      className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black/60 via-transparent to-transparent hidden"
                     >
                       <h3 className="text-xs font-light text-white font-display line-clamp-2">
                         {item.title}

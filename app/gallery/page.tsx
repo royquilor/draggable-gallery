@@ -10,6 +10,16 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "Gallery - Explore",
   description: "Draggable canvas gallery with tactile interactions",
+  openGraph: {
+    title: "Gallery - Explore",
+    description: "Draggable canvas gallery with tactile interactions",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Gallery - Explore",
+    description: "Draggable canvas gallery with tactile interactions",
+  },
 };
 
 /**
