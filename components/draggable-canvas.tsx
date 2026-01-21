@@ -627,18 +627,6 @@ export default function DraggableCanvas() {
         role="main"
         aria-label="Interactive gallery"
       >
-      {/* Custom fonts - Instrument Serif for display, Inter for body */}
-      <style jsx global>{`
-        @import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@300;400;500;600&display=swap');
-        
-        .font-display {
-          font-family: 'Instrument Serif', serif;
-        }
-        
-        .font-body {
-          font-family: 'Inter', sans-serif;
-        }
-      `}</style>
 
       {/* Header with title and instruction - hidden */}
       <header className="fixed top-0 left-0 right-0 z-20 px-6 py-4 md:px-12 md:py-6 flex items-center justify-between pointer-events-none hidden" aria-hidden="true">
@@ -654,7 +642,7 @@ export default function DraggableCanvas() {
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] as const, delay: 0.1 }}
-          className="text-sm text-muted-foreground pointer-events-auto font-body"
+          className="text-sm text-muted-foreground pointer-events-auto font-sans"
         >
           Drag to explore
         </motion.div>
@@ -1006,7 +994,7 @@ export default function DraggableCanvas() {
                         show: { opacity: 1, y: 0 }
                       }}
                     >
-                      <h1 className="text-4xl md:text-5xl font-light text-foreground font-display text-balance">
+                      <h1 className="text-4xl md:text-5xl font-light text-foreground font-display text-balance tracking-tighter">
                         {selectedItem.title}
                       </h1>
                     </motion.div>
@@ -1016,7 +1004,7 @@ export default function DraggableCanvas() {
                         hidden: { opacity: 0, y: shouldReduceMotion ? 0 : 20 },
                         show: { opacity: 1, y: 0 }
                       }}
-                      className="text-lg text-muted-foreground font-body leading-relaxed text-pretty"
+                      className="text-lg text-muted-foreground font-sans leading-relaxed text-pretty"
                     >
                       {selectedItem.description}
                     </motion.p>
@@ -1028,10 +1016,10 @@ export default function DraggableCanvas() {
                       }}
                       className="flex gap-4 pt-4"
                     >
-                      <Button size="lg" className="font-body">
+                      <Button size="lg" className="font-sans">
                         View Full Size
                       </Button>
-                      <Button size="lg" variant="outline" className="font-body">
+                      <Button size="lg" variant="outline" className="font-sans">
                         Add to Collection
                       </Button>
                     </motion.div>
@@ -1044,7 +1032,7 @@ export default function DraggableCanvas() {
                       }}
                       className="pt-8 mt-8 border-t"
                     >
-                      <dl className="space-y-3 text-sm font-body">
+                      <dl className="space-y-3 text-sm font-sans">
                         <div className="flex justify-between">
                           <dt className="text-muted-foreground">Item</dt>
                           <dd className="text-foreground tabular-nums">#{String(selectedItem.id).padStart(3, "0")}</dd>

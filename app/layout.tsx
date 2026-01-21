@@ -1,16 +1,17 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Space_Grotesk } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 
 /**
- * Inter font configuration
+ * Space Grotesk font configuration
  * 
- * Using Inter as the primary font for the application.
- * This matches the design system used in the gallery component.
+ * Using Space Grotesk as the primary font for the entire application.
+ * This provides a modern, geometric typeface for body text, headings, and UI elements.
  */
-const inter = Inter({ 
+const spaceGrotesk = Space_Grotesk({ 
   subsets: ["latin"],
+  variable: "--font-sans",
   display: "swap",
 });
 
@@ -73,7 +74,7 @@ export const metadata: Metadata = {
  * 
  * Wraps all pages with:
  * - ThemeProvider for dark mode support
- * - Inter font
+ * - Space Grotesk font for all text (body, headings, UI)
  * - Global styles
  * 
  * @param children - React children (page content)
@@ -85,8 +86,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <body className={inter.className}>
+    <html 
+      lang="en" 
+      suppressHydrationWarning
+      className={spaceGrotesk.variable}
+    >
+      <body className={spaceGrotesk.className}>
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
