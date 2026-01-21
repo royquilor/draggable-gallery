@@ -593,12 +593,31 @@ export default function DraggableCanvas() {
     }
   }), [shouldReduceMotion])
 
+  // Structured data (JSON-LD) for SEO
+  const structuredData = useMemo(() => ({
+    "@context": "https://schema.org",
+    "@type": "ImageGallery",
+    "name": "Interactive Gallery",
+    "description": "An interactive draggable canvas gallery featuring curated art collections with smooth animations and tactile interactions",
+    "url": typeof window !== "undefined" ? window.location.origin + "/gallery" : "",
+    "image": SAMPLE_ITEMS.slice(0, 4).map(item => item.image),
+    "numberOfItems": SAMPLE_ITEMS.length,
+  }), [])
+
   return (
-    <div 
-      ref={constraintsRef}
-      className="fixed inset-0 overflow-hidden bg-background touch-manipulation"
-      style={{ touchAction: "none" }}
-    >
+    <>
+      {/* Structured data for SEO */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+      />
+      <div 
+        ref={constraintsRef}
+        className="fixed inset-0 overflow-hidden bg-background touch-manipulation"
+        style={{ touchAction: "none" }}
+        role="main"
+        aria-label="Interactive gallery"
+      >
       {/* Custom fonts - Instrument Serif for display, Inter for body */}
       <style jsx global>{`
         @import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@300;400;500;600&display=swap');
@@ -658,13 +677,16 @@ export default function DraggableCanvas() {
         <div
           ref={contentRef}
           className="flex flex-col gap-[200px] items-center justify-center p-[100px] min-h-screen"
+          role="region"
+          aria-label="Gallery items"
         >
           {/* Row 1 - Items 1-7 */}
-          <motion.div 
+          <motion.section 
             variants={containerVariants}
             initial="hidden"
             animate="show"
             className="flex gap-[200px] items-center justify-center"
+            aria-label="Gallery row 1"
           >
             {SAMPLE_ITEMS.slice(0, 7).map((item) => {
               const width = getItemWidth(item.aspectRatio || "landscape")
@@ -692,7 +714,7 @@ export default function DraggableCanvas() {
                   <div className="relative shadow-none" style={{ width: width, height: itemHeight }}>
                     <Image
                       src={item.image}
-                      alt={item.title}
+                      alt={`${item.title} - ${item.description}`}
                       width={width}
                       height={itemHeight}
                       sizes={`${width}px`}
@@ -715,14 +737,15 @@ export default function DraggableCanvas() {
                 </motion.div>
               )
             })}
-          </motion.div>
+          </motion.section>
 
           {/* Row 2 - Items 8-14 */}
-          <motion.div 
+          <motion.section
             variants={containerVariants}
             initial="hidden"
             animate="show"
             className="flex gap-[200px] items-center justify-center"
+            aria-label="Gallery row 2"
           >
             {SAMPLE_ITEMS.slice(7, 14).map((item) => {
               const width = getItemWidth(item.aspectRatio || "landscape")
@@ -750,7 +773,7 @@ export default function DraggableCanvas() {
                   <div className="relative shadow-none" style={{ width: width, height: itemHeight }}>
                     <Image
                       src={item.image}
-                      alt={item.title}
+                      alt={`${item.title} - ${item.description}`}
                       width={width}
                       height={itemHeight}
                       sizes={`${width}px`}
@@ -771,14 +794,15 @@ export default function DraggableCanvas() {
                 </motion.div>
               )
             })}
-          </motion.div>
+          </motion.section>
 
           {/* Row 3 - Items 15-21 */}
-          <motion.div 
+          <motion.section
             variants={containerVariants}
             initial="hidden"
             animate="show"
             className="flex gap-[200px] items-center justify-center"
+            aria-label="Gallery row 3"
           >
             {SAMPLE_ITEMS.slice(14, 21).map((item) => {
               const width = getItemWidth(item.aspectRatio || "landscape")
@@ -806,7 +830,7 @@ export default function DraggableCanvas() {
                   <div className="relative shadow-none" style={{ width: width, height: itemHeight }}>
                     <Image
                       src={item.image}
-                      alt={item.title}
+                      alt={`${item.title} - ${item.description}`}
                       width={width}
                       height={itemHeight}
                       sizes={`${width}px`}
@@ -827,14 +851,15 @@ export default function DraggableCanvas() {
                 </motion.div>
               )
             })}
-          </motion.div>
+          </motion.section>
 
           {/* Row 4 - Items 22-24 (centered) */}
-          <motion.div 
+          <motion.section
             variants={containerVariants}
             initial="hidden"
             animate="show"
             className="flex gap-[200px] items-center justify-center"
+            aria-label="Gallery row 4"
           >
             {SAMPLE_ITEMS.slice(21, 24).map((item) => {
               const width = getItemWidth(item.aspectRatio || "landscape")
@@ -862,7 +887,7 @@ export default function DraggableCanvas() {
                   <div className="relative shadow-none" style={{ width: width, height: itemHeight }}>
                     <Image
                       src={item.image}
-                      alt={item.title}
+                      alt={`${item.title} - ${item.description}`}
                       width={width}
                       height={itemHeight}
                       sizes={`${width}px`}
@@ -883,7 +908,7 @@ export default function DraggableCanvas() {
                 </motion.div>
               )
             })}
-          </motion.div>
+          </motion.section>
         </div>
       </motion.div>
 
@@ -942,7 +967,7 @@ export default function DraggableCanvas() {
                     >
                       <Image
                         src={selectedItem.image}
-                        alt={selectedItem.title}
+                        alt={`${selectedItem.title} - ${selectedItem.description}`}
                         fill
                         sizes="(max-width: 768px) 100vw, 50vw"
                         className="object-cover"
@@ -1038,5 +1063,6 @@ export default function DraggableCanvas() {
         )}
       </AnimatePresence>
     </div>
+    </>
   )
 }
