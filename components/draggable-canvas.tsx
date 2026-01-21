@@ -112,6 +112,90 @@ const SAMPLE_ITEMS: GalleryItem[] = [
     description: "Black and white study emphasizing form and texture.",
     aspectRatio: "portrait"
   },
+  { 
+    id: 13, 
+    title: "Urban Nightscape", 
+    image: "https://images.unsplash.com/photo-1514565131-fce0801e5785?w=800&h=600&fit=crop",
+    description: "City lights create a vibrant tapestry of modern life.",
+    aspectRatio: "landscape"
+  },
+  { 
+    id: 14, 
+    title: "Serene Waters", 
+    image: "https://images.unsplash.com/photo-1505142468610-359e7d316be0?w=600&h=800&fit=crop",
+    description: "Calm waters reflect the sky in perfect symmetry.",
+    aspectRatio: "portrait"
+  },
+  { 
+    id: 15, 
+    title: "Abstract Forms", 
+    image: "https://images.unsplash.com/photo-1557672172-298e090bd0f1?w=800&h=600&fit=crop",
+    description: "Geometric shapes dance in colorful harmony.",
+    aspectRatio: "landscape"
+  },
+  { 
+    id: 16, 
+    title: "Mountain Vista", 
+    image: "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=600&h=800&fit=crop",
+    description: "Majestic peaks reach toward endless skies.",
+    aspectRatio: "portrait"
+  },
+  { 
+    id: 17, 
+    title: "Desert Dreams", 
+    image: "https://images.unsplash.com/photo-1501594907352-04cda38ebc29?w=800&h=600&fit=crop",
+    description: "Endless dunes create waves of golden sand.",
+    aspectRatio: "landscape"
+  },
+  { 
+    id: 18, 
+    title: "Coastal Breeze", 
+    image: "https://images.unsplash.com/photo-1511884642898-4c92249e20b6?w=600&h=800&fit=crop",
+    description: "Ocean waves meet the shore in rhythmic motion.",
+    aspectRatio: "portrait"
+  },
+  { 
+    id: 19, 
+    title: "Forest Canopy", 
+    image: "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=800&h=600&fit=crop",
+    description: "Sunlight filters through dense green leaves.",
+    aspectRatio: "landscape"
+  },
+  { 
+    id: 20, 
+    title: "City Architecture", 
+    image: "https://images.unsplash.com/photo-1518005020951-eccb494ad742?w=600&h=800&fit=crop",
+    description: "Modern structures define the urban landscape.",
+    aspectRatio: "portrait"
+  },
+  { 
+    id: 21, 
+    title: "Sunset Glow", 
+    image: "https://images.unsplash.com/photo-1475274047050-1d0c0975c63e?w=800&h=600&fit=crop",
+    description: "Warm colors paint the evening sky.",
+    aspectRatio: "landscape"
+  },
+  { 
+    id: 22, 
+    title: "Winter Silence", 
+    image: "https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=600&h=800&fit=crop",
+    description: "Snow-covered landscapes in peaceful stillness.",
+    aspectRatio: "portrait"
+  },
+  { 
+    id: 23, 
+    title: "Tropical Paradise", 
+    image: "https://images.unsplash.com/photo-1447752875215-b2761acb3c5d?w=800&h=600&fit=crop",
+    description: "Lush vegetation thrives in warm climates.",
+    aspectRatio: "landscape"
+  },
+  { 
+    id: 24, 
+    title: "Starry Night", 
+    image: "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=600&h=800&fit=crop",
+    description: "Infinite stars illuminate the dark canvas above.",
+    aspectRatio: "portrait"
+  },
 ]
 
 /**
@@ -130,8 +214,47 @@ const SAMPLE_ITEMS: GalleryItem[] = [
  */
 export default function DraggableCanvas() {
   const [selectedItem, setSelectedItem] = useState<GalleryItem | null>(null)
+  const [position, setPosition] = useState({ x: 0, y: 0 })
   const shouldReduceMotion = useReducedMotion()
   const constraintsRef = useRef<HTMLDivElement>(null)
+
+  // Calculate initial position to center the view on the middle items
+  // This runs after component mounts to ensure window is available
+  useEffect(() => {
+    const calculateInitialPosition = () => {
+      const viewportWidth = window.innerWidth
+      const itemWidth = 200 // size-[200px] container
+      const gap = 200
+      const itemsPerRow = 7
+      
+      // Calculate total row width: 7 items + 6 gaps
+      const totalRowWidth = (itemsPerRow * itemWidth) + ((itemsPerRow - 1) * gap)
+      
+      // We want the 4th item (index 3) to be centered in the viewport
+      // Position of 4th item from left: 3 * (itemWidth + gap) + itemWidth/2
+      const centerItemPosition = (3 * (itemWidth + gap)) + (itemWidth / 2)
+      
+      // Calculate offset to center this item in viewport
+      // We need to move the canvas left by: centerItemPosition - viewportWidth/2
+      const offsetX = centerItemPosition - (viewportWidth / 2)
+      
+      setPosition({ x: -offsetX, y: 0 })
+    }
+    
+    calculateInitialPosition()
+    // Recalculate on resize
+    window.addEventListener('resize', calculateInitialPosition)
+    return () => window.removeEventListener('resize', calculateInitialPosition)
+  }, [])
+
+  // Calculate item dimensions
+  const itemHeight = 112
+  const getItemWidth = (aspectRatio: "portrait" | "landscape") => {
+    return aspectRatio === "portrait" 
+      ? Math.round(itemHeight * (3/4)) 
+      : Math.round(itemHeight * (4/3))
+  }
+
 
   // URL state management - sync selected item with URL query params
   useEffect(() => {
@@ -216,6 +339,7 @@ export default function DraggableCanvas() {
     <div 
       ref={constraintsRef}
       className="fixed inset-0 overflow-hidden bg-background touch-manipulation"
+      style={{ touchAction: "none" }}
     >
       {/* Custom fonts - Instrument Serif for display, Inter for body */}
       <style jsx global>{`
@@ -250,103 +374,251 @@ export default function DraggableCanvas() {
         </motion.div>
       </header>
 
-      {/* Draggable Canvas with enhanced spring physics */}
+      {/* Draggable Canvas - follows Figma code pattern exactly */}
       <motion.div
         drag
         dragConstraints={constraintsRef}
         dragElastic={0.1}
         dragTransition={{ 
           bounceStiffness: 300, 
-          bounceDamping: 20,
-          power: 0.2,
-          timeConstant: 200
+          bounceDamping: 20
         }}
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
-        className="absolute inset-0 cursor-grab active:cursor-grabbing"
-        style={{ touchAction: "none" }}
+        onDrag={(event, info) => {
+          setPosition({ x: info.offset.x, y: info.offset.y })
+        }}
+        className="absolute cursor-grab active:cursor-grabbing"
+        style={{
+          x: position.x,
+          y: position.y,
+          willChange: "transform"
+        }}
       >
-        <div className="relative min-w-[200vw] min-h-[200vh] p-[10vw]">
-          {/* Grid with stagger animation */}
+        <div className="flex flex-col gap-[200px] items-center justify-center p-[100px] min-h-screen">
+          {/* Row 1 - Items 1-7 */}
           <motion.div 
             variants={containerVariants}
             initial="hidden"
             animate="show"
-            className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 md:gap-8 lg:gap-12 max-w-[180vw] mx-auto"
+            className="flex gap-[200px] items-center justify-center"
           >
-            {SAMPLE_ITEMS.map((item) => (
-              <motion.article
-                key={item.id}
-                variants={itemVariants}
-                whileHover={{ 
-                  scale: 1.05,
-                  transition: { 
-                    duration: 0.3,
-                    type: "spring",
-                    stiffness: 400,
-                    damping: 25
-                  }
-                }}
-                whileTap={{ scale: 0.95 }}
-                className="group"
-                style={{ pointerEvents: "auto" }}
-                onClick={(e) => {
-                  e.stopPropagation()
-                  openDetail(item)
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault()
+            {SAMPLE_ITEMS.slice(0, 7).map((item) => {
+              const width = getItemWidth(item.aspectRatio || "landscape")
+              return (
+                <motion.div
+                  key={item.id}
+                  variants={itemVariants}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  className="flex items-center justify-center size-[200px] cursor-pointer"
+                  onClick={(e) => {
+                    e.stopPropagation()
                     openDetail(item)
-                  }
-                }}
-                tabIndex={0}
-                role="button"
-                aria-label={`View details for ${item.title}`}
-              >
-                <Card className="relative overflow-hidden border-0 bg-muted/50 backdrop-blur-sm">
-                  <div 
-                    className="relative"
-                    style={{ 
-                      aspectRatio: item.aspectRatio === "portrait" ? "3/4" : "4/3" 
-                    }}
-                  >
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault()
+                      openDetail(item)
+                    }
+                  }}
+                  tabIndex={0}
+                  role="button"
+                  aria-label={`View details for ${item.title}`}
+                >
+                  <div className="relative" style={{ width: width, height: itemHeight }}>
                     <Image
                       src={item.image}
                       alt={item.title}
-                      fill
-                      sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
-                      className="object-cover transition-transform duration-700 ease-out group-hover:scale-105"
-                      style={{ willChange: "transform" }}
+                      width={width}
+                      height={itemHeight}
+                      sizes={`${width}px`}
+                      className="absolute inset-0 max-w-none object-cover pointer-events-none size-full rounded-md"
                       priority={item.id <= 4}
                     />
-                    
-                    {/* Animated gradient overlay on hover */}
+                    {/* Title overlay on hover */}
                     <motion.div 
-                      initial={{ opacity: 0 }}
-                      whileHover={{ opacity: 1 }}
+                      initial={{ opacity: 0, y: "100%" }}
+                      whileHover={{ opacity: 1, y: 0 }}
                       transition={{ duration: 0.3 }}
-                      className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"
-                    />
-                    
-                    {/* Title overlay with slide-up animation on hover */}
-                    <motion.div 
-                      initial={{ y: "100%" }}
-                      whileHover={{ y: 0 }}
-                      transition={{ 
-                        duration: 0.3,
-                        ease: [0.22, 1, 0.36, 1] as const
-                      }}
-                      className="absolute bottom-0 left-0 right-0 p-4"
+                      className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black/60 via-transparent to-transparent"
                     >
-                      <h3 className="text-lg font-light text-white font-display">
+                      <h3 className="text-xs font-light text-white font-display line-clamp-2">
                         {item.title}
                       </h3>
                     </motion.div>
                   </div>
-                </Card>
-              </motion.article>
-            ))}
+                </motion.div>
+              )
+            })}
+          </motion.div>
+
+          {/* Row 2 - Items 8-14 */}
+          <motion.div 
+            variants={containerVariants}
+            initial="hidden"
+            animate="show"
+            className="flex gap-[200px] items-center justify-center"
+          >
+            {SAMPLE_ITEMS.slice(7, 14).map((item) => {
+              const width = getItemWidth(item.aspectRatio || "landscape")
+              return (
+                <motion.div
+                  key={item.id}
+                  variants={itemVariants}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  className="flex items-center justify-center size-[200px] cursor-pointer"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    openDetail(item)
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault()
+                      openDetail(item)
+                    }
+                  }}
+                  tabIndex={0}
+                  role="button"
+                  aria-label={`View details for ${item.title}`}
+                >
+                  <div className="relative" style={{ width: width, height: itemHeight }}>
+                    <Image
+                      src={item.image}
+                      alt={item.title}
+                      width={width}
+                      height={itemHeight}
+                      sizes={`${width}px`}
+                      className="absolute inset-0 max-w-none object-cover pointer-events-none size-full rounded-md"
+                    />
+                    {/* Title overlay on hover */}
+                    <motion.div 
+                      initial={{ opacity: 0, y: "100%" }}
+                      whileHover={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.3 }}
+                      className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black/60 via-transparent to-transparent"
+                    >
+                      <h3 className="text-xs font-light text-white font-display line-clamp-2">
+                        {item.title}
+                      </h3>
+                    </motion.div>
+                  </div>
+                </motion.div>
+              )
+            })}
+          </motion.div>
+
+          {/* Row 3 - Items 15-21 */}
+          <motion.div 
+            variants={containerVariants}
+            initial="hidden"
+            animate="show"
+            className="flex gap-[200px] items-center justify-center"
+          >
+            {SAMPLE_ITEMS.slice(14, 21).map((item) => {
+              const width = getItemWidth(item.aspectRatio || "landscape")
+              return (
+                <motion.div
+                  key={item.id}
+                  variants={itemVariants}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  className="flex items-center justify-center size-[200px] cursor-pointer"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    openDetail(item)
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault()
+                      openDetail(item)
+                    }
+                  }}
+                  tabIndex={0}
+                  role="button"
+                  aria-label={`View details for ${item.title}`}
+                >
+                  <div className="relative" style={{ width: width, height: itemHeight }}>
+                    <Image
+                      src={item.image}
+                      alt={item.title}
+                      width={width}
+                      height={itemHeight}
+                      sizes={`${width}px`}
+                      className="absolute inset-0 max-w-none object-cover pointer-events-none size-full rounded-md"
+                    />
+                    {/* Title overlay on hover */}
+                    <motion.div 
+                      initial={{ opacity: 0, y: "100%" }}
+                      whileHover={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.3 }}
+                      className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black/60 via-transparent to-transparent"
+                    >
+                      <h3 className="text-xs font-light text-white font-display line-clamp-2">
+                        {item.title}
+                      </h3>
+                    </motion.div>
+                  </div>
+                </motion.div>
+              )
+            })}
+          </motion.div>
+
+          {/* Row 4 - Items 22-24 (centered) */}
+          <motion.div 
+            variants={containerVariants}
+            initial="hidden"
+            animate="show"
+            className="flex gap-[200px] items-center justify-center"
+          >
+            {SAMPLE_ITEMS.slice(21, 24).map((item) => {
+              const width = getItemWidth(item.aspectRatio || "landscape")
+              return (
+                <motion.div
+                  key={item.id}
+                  variants={itemVariants}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  className="flex items-center justify-center size-[200px] cursor-pointer"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    openDetail(item)
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault()
+                      openDetail(item)
+                    }
+                  }}
+                  tabIndex={0}
+                  role="button"
+                  aria-label={`View details for ${item.title}`}
+                >
+                  <div className="relative" style={{ width: width, height: itemHeight }}>
+                    <Image
+                      src={item.image}
+                      alt={item.title}
+                      width={width}
+                      height={itemHeight}
+                      sizes={`${width}px`}
+                      className="absolute inset-0 max-w-none object-cover pointer-events-none size-full rounded-md"
+                    />
+                    {/* Title overlay on hover */}
+                    <motion.div 
+                      initial={{ opacity: 0, y: "100%" }}
+                      whileHover={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.3 }}
+                      className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black/60 via-transparent to-transparent"
+                    >
+                      <h3 className="text-xs font-light text-white font-display line-clamp-2">
+                        {item.title}
+                      </h3>
+                    </motion.div>
+                  </div>
+                </motion.div>
+              )
+            })}
           </motion.div>
         </div>
       </motion.div>
