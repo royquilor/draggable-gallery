@@ -641,15 +641,15 @@ export default function DraggableCanvas() {
       `}</style>
 
       {/* Header with title and instruction - hidden */}
-      <header className="fixed top-0 left-0 right-0 z-20 px-6 py-4 md:px-12 md:py-6 flex items-center justify-between pointer-events-none hidden">
-        <motion.h1 
+      <header className="fixed top-0 left-0 right-0 z-20 px-6 py-4 md:px-12 md:py-6 flex items-center justify-between pointer-events-none hidden" aria-hidden="true">
+        <motion.div 
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] as const }}
           className="text-2xl md:text-3xl font-light text-foreground pointer-events-auto font-display"
         >
           Gallery
-        </motion.h1>
+        </motion.div>
         <motion.div 
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
@@ -704,7 +704,7 @@ export default function DraggableCanvas() {
                   variants={itemVariants}
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
-                  className="flex items-center justify-center size-[200px] cursor-pointer shadow-none"
+                  className="flex items-center justify-center size-[200px] cursor-pointer shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                   onClick={(e) => {
                     e.stopPropagation()
                     openDetail(item)
@@ -763,7 +763,7 @@ export default function DraggableCanvas() {
                   variants={itemVariants}
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
-                  className="flex items-center justify-center size-[200px] cursor-pointer shadow-none"
+                  className="flex items-center justify-center size-[200px] cursor-pointer shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                   onClick={(e) => {
                     e.stopPropagation()
                     openDetail(item)
@@ -820,7 +820,7 @@ export default function DraggableCanvas() {
                   variants={itemVariants}
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
-                  className="flex items-center justify-center size-[200px] cursor-pointer shadow-none"
+                  className="flex items-center justify-center size-[200px] cursor-pointer shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                   onClick={(e) => {
                     e.stopPropagation()
                     openDetail(item)
@@ -877,7 +877,7 @@ export default function DraggableCanvas() {
                   variants={itemVariants}
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
-                  className="flex items-center justify-center size-[200px] cursor-pointer shadow-none"
+                  className="flex items-center justify-center size-[200px] cursor-pointer shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                   onClick={(e) => {
                     e.stopPropagation()
                     openDetail(item)
@@ -958,7 +958,7 @@ export default function DraggableCanvas() {
                   }}
                   whileTap={{ scale: 0.9 }}
                   onClick={closeDetail}
-                  className="absolute top-4 right-4 z-10 w-10 h-10 flex items-center justify-center rounded-full bg-background/80 backdrop-blur-sm hover:bg-background transition-colors"
+                  className="absolute top-4 right-4 z-10 w-10 h-10 flex items-center justify-center rounded-full bg-background/80 backdrop-blur-sm hover:bg-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                   aria-label="Close detail view"
                 >
                   <X className="w-5 h-5 text-foreground" />
@@ -1006,9 +1006,9 @@ export default function DraggableCanvas() {
                         show: { opacity: 1, y: 0 }
                       }}
                     >
-                      <h2 className="text-4xl md:text-5xl font-light text-foreground font-display text-balance">
+                      <h1 className="text-4xl md:text-5xl font-light text-foreground font-display text-balance">
                         {selectedItem.title}
-                      </h2>
+                      </h1>
                     </motion.div>
                     
                     <motion.p 
