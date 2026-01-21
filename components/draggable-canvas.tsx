@@ -85,9 +85,9 @@ const SAMPLE_ITEMS: GalleryItem[] = [
   },
   { 
     id: 9, 
-    title: "Soft Gradients", 
-    image: "https://images.unsplash.com/photo-1475274047050-1d0c0975c63e?w=800&h=600&fit=crop",
-    description: "Sunset over water blends earth and sky seamlessly.",
+    title: "Tropical Beach", 
+    image: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=800&h=600&fit=crop",
+    description: "Crystal clear turquoise waters and white sandy beaches.",
     aspectRatio: "landscape"
   },
   { 
@@ -106,14 +106,14 @@ const SAMPLE_ITEMS: GalleryItem[] = [
   },
   { 
     id: 12, 
-    title: "Monochrome Mood", 
+    title: "Vibrant Sunset", 
     image: "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=600&h=800&fit=crop",
-    description: "Black and white study emphasizing form and texture.",
+    description: "Brilliant colors paint the sky in a dramatic display.",
     aspectRatio: "portrait"
   },
   { 
     id: 13, 
-    title: "Urban Nightscape", 
+    title: "Urban Lights", 
     image: "https://images.unsplash.com/photo-1514565131-fce0801e5785?w=800&h=600&fit=crop",
     description: "City lights create a vibrant tapestry of modern life.",
     aspectRatio: "landscape"
@@ -169,16 +169,16 @@ const SAMPLE_ITEMS: GalleryItem[] = [
   },
   { 
     id: 21, 
-    title: "Sunset Glow", 
-    image: "https://images.unsplash.com/photo-1475274047050-1d0c0975c63e?w=800&h=600&fit=crop",
-    description: "Warm colors paint the evening sky.",
+    title: "Colorful Flowers", 
+    image: "https://images.unsplash.com/photo-1490750967868-88aa4486c946?w=800&h=600&fit=crop",
+    description: "Vibrant blooms create a burst of color and life.",
     aspectRatio: "landscape"
   },
   { 
     id: 22, 
-    title: "Winter Silence", 
+    title: "Mountain Peaks", 
     image: "https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=600&h=800&fit=crop",
-    description: "Snow-covered landscapes in peaceful stillness.",
+    description: "Majestic peaks with dramatic lighting and contrast.",
     aspectRatio: "portrait"
   },
   { 
@@ -190,9 +190,37 @@ const SAMPLE_ITEMS: GalleryItem[] = [
   },
   { 
     id: 24, 
-    title: "Starry Night", 
+    title: "Sunrise Colors", 
     image: "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=600&h=800&fit=crop",
-    description: "Infinite stars illuminate the dark canvas above.",
+    description: "Brilliant morning colors paint the sky in warm hues.",
+    aspectRatio: "portrait"
+  },
+  { 
+    id: 25, 
+    title: "Golden Hour", 
+    image: "https://images.unsplash.com/photo-1505142468610-359e7d316be0?w=600&h=800&fit=crop",
+    description: "Warm golden light bathes the landscape in ethereal beauty.",
+    aspectRatio: "portrait"
+  },
+  { 
+    id: 26, 
+    title: "Colorful Market", 
+    image: "https://images.unsplash.com/photo-1447752875215-b2761acb3c5d?w=800&h=600&fit=crop",
+    description: "Vibrant colors and textures create a lively atmosphere.",
+    aspectRatio: "landscape"
+  },
+  { 
+    id: 27, 
+    title: "Ocean Waves", 
+    image: "https://images.unsplash.com/photo-1501594907352-04cda38ebc29?w=800&h=600&fit=crop",
+    description: "Turquoise waters crash against rocky shores.",
+    aspectRatio: "landscape"
+  },
+  { 
+    id: 28, 
+    title: "Desert Sunrise", 
+    image: "https://images.unsplash.com/photo-1519681393784-d120267933ba?w=600&h=800&fit=crop",
+    description: "Dawn breaks over sand dunes in warm orange and pink hues.",
     aspectRatio: "portrait"
   },
 ]
@@ -860,7 +888,7 @@ export default function DraggableCanvas() {
             })}
           </motion.section>
 
-          {/* Row 4 - Items 22-24 (centered) */}
+          {/* Row 4 - Items 22-28 (7 items) */}
           <motion.section
             variants={containerVariants}
             initial="hidden"
@@ -868,7 +896,7 @@ export default function DraggableCanvas() {
             className="flex gap-[200px] items-center justify-center"
             aria-label="Gallery row 4"
           >
-            {SAMPLE_ITEMS.slice(21, 24).map((item) => {
+            {SAMPLE_ITEMS.slice(21, 28).map((item) => {
               const width = getItemWidth(item.aspectRatio || "landscape")
               return (
                 <motion.div
