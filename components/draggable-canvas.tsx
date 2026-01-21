@@ -680,12 +680,11 @@ export default function DraggableCanvas() {
         style={{
           x: springX,
           y: springY,
-          willChange: "transform"
         }}
       >
         <div
           ref={contentRef}
-          className="flex flex-col gap-[200px] items-center justify-center p-[100px] min-h-screen"
+          className="flex flex-col gap-[200px] items-center justify-center p-[100px] min-h-dvh"
           role="region"
           aria-label="Gallery items"
         >
@@ -927,11 +926,11 @@ export default function DraggableCanvas() {
           <>
             {/* Backdrop with blur effect */}
             <motion.div
-              initial={{ opacity: 0, backdropFilter: "blur(0px)" }}
-              animate={{ opacity: 1, backdropFilter: "blur(8px)" }}
-              exit={{ opacity: 0, backdropFilter: "blur(0px)" }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
               transition={{ duration: shouldReduceMotion ? 0.01 : 0.3 }}
-              className="fixed inset-0 z-50 bg-black/90"
+              className="fixed inset-0 z-50 bg-black/90 backdrop-blur-sm"
               onClick={closeDetail}
             />
 
@@ -1007,7 +1006,7 @@ export default function DraggableCanvas() {
                         show: { opacity: 1, y: 0 }
                       }}
                     >
-                      <h2 className="text-4xl md:text-5xl font-light text-foreground font-display">
+                      <h2 className="text-4xl md:text-5xl font-light text-foreground font-display text-balance">
                         {selectedItem.title}
                       </h2>
                     </motion.div>
@@ -1017,7 +1016,7 @@ export default function DraggableCanvas() {
                         hidden: { opacity: 0, y: shouldReduceMotion ? 0 : 20 },
                         show: { opacity: 1, y: 0 }
                       }}
-                      className="text-lg text-muted-foreground font-body leading-relaxed"
+                      className="text-lg text-muted-foreground font-body leading-relaxed text-pretty"
                     >
                       {selectedItem.description}
                     </motion.p>
@@ -1048,7 +1047,7 @@ export default function DraggableCanvas() {
                       <dl className="space-y-3 text-sm font-body">
                         <div className="flex justify-between">
                           <dt className="text-muted-foreground">Item</dt>
-                          <dd className="text-foreground">#{String(selectedItem.id).padStart(3, "0")}</dd>
+                          <dd className="text-foreground tabular-nums">#{String(selectedItem.id).padStart(3, "0")}</dd>
                         </div>
                         <div className="flex justify-between">
                           <dt className="text-muted-foreground">Type</dt>
