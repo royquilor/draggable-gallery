@@ -594,23 +594,32 @@ export default function DraggableCanvas() {
   }), [shouldReduceMotion])
 
   // Structured data (JSON-LD) for SEO
-  const structuredData = useMemo(() => ({
-    "@context": "https://schema.org",
-    "@type": "ImageGallery",
-    "name": "Interactive Gallery",
-    "description": "An interactive draggable canvas gallery featuring curated art collections with smooth animations and tactile interactions",
-    "url": typeof window !== "undefined" ? window.location.origin + "/gallery" : "",
-    "image": SAMPLE_ITEMS.slice(0, 4).map(item => item.image),
-    "numberOfItems": SAMPLE_ITEMS.length,
-  }), [])
+  // Use state to avoid hydration mismatch - set after client-side mount
+  const [structuredData, setStructuredData] = useState<string | null>(null)
+
+  useEffect(() => {
+    // Set structured data after hydration to avoid mismatch
+    const data = {
+      "@context": "https://schema.org",
+      "@type": "ImageGallery",
+      "name": "Interactive Gallery",
+      "description": "An interactive draggable canvas gallery featuring curated art collections with smooth animations and tactile interactions",
+      "url": window.location.origin,
+      "image": SAMPLE_ITEMS.slice(0, 4).map(item => item.image),
+      "numberOfItems": SAMPLE_ITEMS.length,
+    }
+    setStructuredData(JSON.stringify(data))
+  }, [])
 
   return (
     <>
-      {/* Structured data for SEO */}
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
-      />
+      {/* Structured data for SEO - only render after hydration */}
+      {structuredData && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: structuredData }}
+        />
+      )}
       <div 
         ref={constraintsRef}
         className="fixed inset-0 overflow-hidden bg-background touch-manipulation"
